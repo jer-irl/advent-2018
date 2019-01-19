@@ -28,8 +28,9 @@ def main():
 
     try:
         res = sol_module.solve(input_data)
-    except AttributeError:
+    except AttributeError as ex:
         print("Solution not yet created in module")
+        print(ex)
         return 1
 
     print("Calculated solution:")

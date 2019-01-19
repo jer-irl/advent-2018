@@ -1,3 +1,7 @@
+import itertools
+import math
+
+
 class Cart:
     intersection_turns = {
         '^': {0: '<', 1: '^', 2: '>'},
@@ -23,6 +27,7 @@ class Cart:
     def __init__(self, c):
         self.c = c
         self.turn_counter = 0
+        self.last_turn_moved = -math.inf
 
     def turn(self, track_char):
         if track_char == '|' or track_char == '-':
@@ -35,7 +40,7 @@ class Cart:
             self.c = self.intersection_turns[self.c][self.turn_counter % 3]
             self.turn_counter += 1
         else:
-            raise RuntimeError("Off the track!")
+            raise RuntimeError("Off the track! Char: {}".format(track_char))
 
 
 class CellRecord:
@@ -52,25 +57,44 @@ class CellRecord:
 
 
 movement_deltas = {
-    'v': (0, -1),
-    '^': (0, 1),
+    'v': (0, 1),
+    '^': (0, -1),
     '>': (1, 0),
     '<': (-1, 0)
 }
 
 
-def solve(input_data):
+def state_as_str(state, highlighted_locs=[]):
+    res = ""
+    for y, row in enumerate(state):
+        for x, col in enumerate(row):
+            if (x, y) in highlighted_locs:
+                res += "*"
+            else:
+                res += col.cart.c if col.cart is not None else col.track
+        res += "\n"
+    return res
+
+
+def initial_state(input_data):
     state = []
     for line in input_data.split('\n'):
         row = []
         for c in line:
             row.append(CellRecord(c))
         state.append(row)
+    return state
 
-    while True:
+
+def solve(input_data):
+    state = initial_state(input_data)
+
+    for turn in itertools.count():
         for y, row in enumerate(state):
             for x, record in enumerate(row):
                 if record.cart is None:
+                    continue
+                elif record.cart.last_turn_moved >= turn:
                     continue
 
                 dx, dy = movement_deltas[record.cart.c]
@@ -82,4 +106,8 @@ def solve(input_data):
                 # Otherwise, move the cart into the state
                 destination_record.cart = record.cart
                 record.cart = None
-                destination_record.cart.turn(destination_record.track)
+                try:
+                    destination_record.cart.turn(destination_record.track)
+                except Exception:
+                    raise
+                destination_record.cart.last_turn_moved = turn
